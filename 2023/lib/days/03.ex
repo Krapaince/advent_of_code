@@ -2,8 +2,14 @@ defmodule Day03 do
   alias Day03.Schematic
 
   def part1() do
-    schematic = AdventOfCode2023.get_lines("3") |> Schematic.from()
+    AdventOfCode2023.get_lines("3")
+    |> Schematic.from()
+    |> stream_parts()
+    |> Stream.map(&Map.fetch!(&1, :nb))
+    |> Enum.sum()
+  end
 
+  def stream_parts(schematic) do
     schematic.content
     |> Stream.with_index()
     |> Stream.flat_map(fn {line, y} ->
@@ -14,8 +20,6 @@ defmodule Day03 do
       end)
     end)
     |> Stream.filter(&is_part(&1, schematic))
-    |> Stream.map(&Map.fetch!(&1, :nb))
-    |> Enum.sum()
   end
 
   def find_line_maybe_parts(line) do
@@ -41,9 +45,75 @@ defmodule Day03 do
     Stream.zip([parts_position, parts_nb, parts_len])
   end
 
+  def part2() do
+    schematic = AdventOfCode2023.get_lines("3") |> Schematic.from()
+
+    parts =
+      schematic
+      |> stream_parts()
+      |> Enum.to_list()
+
+    schematic
+    |> stream_maybe_gear()
+    |> Stream.map(fn gear_coord ->
+      adjacent_parts =
+        stream_adjacent_parts(gear_coord, parts, schematic.dim)
+        |> Enum.to_list()
+
+      {gear_coord, adjacent_parts}
+    end)
+    |> Stream.filter(fn {coord, adjacent_parts} ->
+      nb_adjacent_parts = length(adjacent_parts)
+      should_keep = nb_adjacent_parts == 2
+
+      if !should_keep do
+        IO.inspect("Gear #{inspect(coord)} have #{nb_adjacent_parts} adjacent part.")
+      end
+
+      should_keep
+    end)
+    |> Stream.map(fn {_, [part1, part2]} ->
+      part1.nb * part2.nb
+    end)
+    |> Enum.sum()
+  end
+
+  def stream_maybe_gear(schematic) do
+    schematic.content
+    |> Stream.with_index()
+    |> Stream.flat_map(fn {line, y} ->
+      line
+      |> find_line_maybe_gear()
+      |> Enum.map(fn x -> {x, y} end)
+    end)
+  end
+
   def is_part(part, schematic) do
     stream_adjacent_symbol(schematic, part.x, part.y, part.len)
     |> Enum.any?(&is_symbol/1)
+  end
+
+  def find_line_maybe_gear(line) do
+    Stream.unfold(line, &String.next_grapheme/1)
+    |> Stream.with_index()
+    |> Stream.filter(fn {graphme, _} -> graphme == "*" end)
+    |> Stream.map(&elem(&1, 1))
+  end
+
+  def stream_adjacent_parts({x, y}, parts, schema_dim) do
+    adjacent_coords = stream_adjacent_coordinates(schema_dim, x, y, 1) |> MapSet.new()
+
+    parts
+    |> Stream.filter(fn part ->
+      part_adjacent_coords =
+        stream_part_coordinates(part.x, part.y, part.len) |> MapSet.new()
+
+      nb_common_adjacent_coords =
+        MapSet.intersection(adjacent_coords, part_adjacent_coords)
+        |> MapSet.size()
+
+      nb_common_adjacent_coords > 0
+    end)
   end
 
   def stream_adjacent_symbol(schematic, x, y, len) do
@@ -68,6 +138,11 @@ defmodule Day03 do
       in_range?(x, 0, schema_dim.x) and in_range?(y, 0, schema_dim.y)
     end)
     |> Stream.uniq()
+  end
+
+  def stream_part_coordinates(x, y, len) do
+    [x..(x + len - 1), Stream.repeatedly(fn -> y end)]
+    |> Stream.zip()
   end
 
   def get_char_at(schematic, {x, y}) do
