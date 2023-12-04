@@ -25,6 +25,20 @@ defmodule Day02 do
         Map.get(set, :blue, 0) <= blue
     end)
   end
+
+  def part2() do
+    AdventOfCode2023.get_lines("2")
+    |> Day02.Parse.game()
+    |> Stream.map(fn {id, sets} ->
+      Enum.reduce(sets, &Map.merge(&1, &2, fn _, v1, v2 -> max(v1, v2) end))
+      |> Map.values()
+      |> tap(fn colors ->
+        if Enum.any?(colors, &Kernel.==(&1, 0)), do: IO.puts("Game #{id}")
+      end)
+      |> Enum.reduce(&Kernel.*/2)
+    end)
+    |> Enum.sum()
+  end
 end
 
 defmodule Day02.Parse do
