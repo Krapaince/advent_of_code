@@ -20,7 +20,9 @@ defmodule Day02 do
 
     sets
     |> Enum.all?(fn set ->
-      set.red <= red and set.green <= green and set.blue <= blue
+      Map.get(set, :red, 0) <= red and
+        Map.get(set, :green, 0) <= green and
+        Map.get(set, :blue, 0) <= blue
     end)
   end
 end
@@ -42,13 +44,7 @@ defmodule Day02.Parse do
     sets |> String.split(";") |> Enum.map(&game_set/1)
   end
 
-  defp game_set(set) do
-    default_set = %{red: 0, green: 0, blue: 0}
-
-    set = String.split(set, ",") |> Map.new(&draw/1)
-
-    Map.merge(default_set, set)
-  end
+  defp game_set(set), do: String.split(set, ",") |> Map.new(&draw/1)
 
   defp draw(draw) do
     [nb, color] = String.split(draw, " ", trim: true)
