@@ -4,14 +4,39 @@ defmodule Day05 do
 
   def run(opts \\ []) do
     {seeds, maps} =
-      AdventOfCode2023.get("5")
-      |> parse_almanac(opts)
+      AdventOfCode2023.get("5") |> parse_almanac(opts)
 
     seeds
-    |> Stream.map(fn seed ->
-      map_seed_to_destination(seed, "location", maps)
+    |> Stream.chunk_every(1000)
+    |> Stream.chunk_every(20)
+    |> Stream.map(fn chunk ->
+      Task.async_stream(chunk, &find_min_location_from_seeds(&1, maps),
+        ordered: false,
+        max_concurrency: 20
+      )
+      |> Enum.map(fn {:ok, chunk} -> chunk end)
     end)
+    |> Stream.flat_map(&List.wrap/1)
     |> Enum.min()
+    |> List.first()
+  end
+
+  def find_min_location_from_seeds(seeds, maps) do
+    seeds
+    |> Stream.transform(
+      fn -> nil end,
+      fn seed, minimum_location_id ->
+        location_id =
+          seed
+          |> map_seed_to_destination("location", maps)
+          |> min(minimum_location_id)
+
+        {[], location_id}
+      end,
+      fn min -> {[min], nil} end,
+      fn _ -> nil end
+    )
+    |> Enum.take(1)
   end
 
   def parse_almanac(content, opts) do
@@ -29,12 +54,12 @@ defmodule Day05 do
     seeds =
       seeds
       |> String.split(" ", trim: true)
-      |> Enum.map(&String.to_integer/1)
+      |> Stream.map(&String.to_integer/1)
 
     if Keyword.get(opts, :range_seed, false) do
       seeds
-      |> Enum.chunk_every(2)
-      |> Enum.flat_map(fn [start, range_len] -> start..(start + range_len - 1) end)
+      |> Stream.chunk_every(2)
+      |> Stream.flat_map(fn [start, range_len] -> start..(start + range_len - 1) end)
     else
       seeds
     end
