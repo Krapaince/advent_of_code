@@ -1,8 +1,11 @@
 defmodule Day05 do
-  def part1() do
+  def part1(), do: run()
+  def part2(), do: run(range_seed: true)
+
+  def run(opts \\ []) do
     {seeds, maps} =
       AdventOfCode2023.get("5")
-      |> parse_almanac()
+      |> parse_almanac(opts)
 
     seeds
     |> Stream.map(fn seed ->
@@ -11,21 +14,30 @@ defmodule Day05 do
     |> Enum.min()
   end
 
-  def parse_almanac(content) do
+  def parse_almanac(content, opts) do
     [seeds | maps] = String.split(content, "\n\n")
 
-    seeds = parse_seeds(seeds)
+    seeds = parse_seeds(seeds, opts)
     maps = parse_maps(maps)
 
     {seeds, maps}
   end
 
-  def parse_seeds(seeds) do
+  def parse_seeds(seeds, opts \\ []) do
     "seeds: " <> seeds = seeds
 
-    seeds
-    |> String.split(" ", trim: true)
-    |> Enum.map(&String.to_integer/1)
+    seeds =
+      seeds
+      |> String.split(" ", trim: true)
+      |> Enum.map(&String.to_integer/1)
+
+    if Keyword.get(opts, :range_seed, false) do
+      seeds
+      |> Enum.chunk_every(2)
+      |> Enum.flat_map(fn [start, range_len] -> start..(start + range_len - 1) end)
+    else
+      seeds
+    end
   end
 
   def parse_maps(maps), do: Enum.map(maps, &parse_map/1)
