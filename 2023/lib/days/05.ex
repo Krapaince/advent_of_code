@@ -39,6 +39,57 @@ defmodule Day05.Part1 do
   def in_range?(x, {min, max}), do: x >= min and x <= max
 end
 
+defmodule Day05.Part2 do
+  require Logger
+
+  def run() do
+    {seeds, maps} =
+      AdventOfCode2023.get("5") |> Day05.parse_almanac(range_seed: true)
+
+    maps =
+      maps
+      |> Enum.map(fn map ->
+        map
+        |> Map.update!(:ranges, fn ranges ->
+          ranges
+          |> Enum.map(fn range ->
+            %{src: src, dest: dest} = range
+
+            {src_start, src_end} = src
+            {dest, _} = dest
+
+            step_to_shift =
+              dest - src_start
+
+            range = src_start..src_end
+
+            {range, step_to_shift}
+          end)
+          |> Enum.sort_by(fn {start.._//_, _} -> start end)
+        end)
+      end)
+
+    seeds
+    |> map_id_ranges_to_destination("seed", "location", maps)
+    |> Stream.map(fn start.._//_ -> start end)
+    |> Enum.min()
+  end
+
+  def map_id_ranges_to_destination(id_ranges, location, location, _), do: id_ranges
+
+  def map_id_ranges_to_destination(id_ranges, source, destination, maps) do
+    map = Enum.find(maps, fn %{source: src} -> src == source end)
+
+    id_ranges
+    |> Enum.flat_map(&map_id_range(&1, map))
+    |> map_id_ranges_to_destination(map.destination, destination, maps)
+  end
+
+  def map_id_range(id_range, map) do
+    RangeUtils.stream_split_and_shift(id_range, map.ranges)
+  end
+end
+
 defmodule Day05 do
   def parse_almanac(content, opts \\ []) do
     [seeds | maps] = String.split(content, "\n\n")
