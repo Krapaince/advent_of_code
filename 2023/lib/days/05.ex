@@ -1,45 +1,46 @@
-defmodule Day05 do
-  def part1(), do: run()
-  def part2(), do: run(range_seed: true)
-
-  def run(opts \\ []) do
+defmodule Day05.Part1 do
+  def run() do
     {seeds, maps} =
-      AdventOfCode2023.get("5") |> parse_almanac(opts)
+      AdventOfCode2023.get("5") |> Day05.parse_almanac()
 
     seeds
-    |> Stream.chunk_every(1000)
-    |> Stream.chunk_every(20)
-    |> Stream.map(fn chunk ->
-      Task.async_stream(chunk, &find_min_location_from_seeds(&1, maps),
-        ordered: false,
-        max_concurrency: 20
-      )
-      |> Enum.map(fn {:ok, chunk} -> chunk end)
+    |> Stream.map(fn seed ->
+      map_seed_to_destination(seed, "location", maps)
     end)
-    |> Stream.flat_map(&List.wrap/1)
     |> Enum.min()
-    |> List.first()
   end
 
-  def find_min_location_from_seeds(seeds, maps) do
-    seeds
-    |> Stream.transform(
-      fn -> nil end,
-      fn seed, minimum_location_id ->
-        location_id =
-          seed
-          |> map_seed_to_destination("location", maps)
-          |> min(minimum_location_id)
+  def map_seed_to_destination(seed, destination, maps),
+    do: map_source_to_destination(seed, "seed", destination, maps)
 
-        {[], location_id}
-      end,
-      fn min -> {[min], nil} end,
-      fn _ -> nil end
-    )
-    |> Enum.take(1)
+  def map_source_to_destination(id, location, location, _), do: id
+
+  def map_source_to_destination(id, source, destination, maps) do
+    map = Enum.find(maps, fn %{source: src} -> src == source end)
+
+    id = map_id(id, map)
+
+    map_source_to_destination(id, map.destination, destination, maps)
   end
 
-  def parse_almanac(content, opts) do
+  def map_id(id, map) do
+    map.ranges |> Enum.find_value(id, &map_id_through_range(id, &1))
+  end
+
+  def map_id_through_range(id, range) do
+    if in_range?(id, range.src) do
+      {src, _} = range.src
+      {dest, _} = range.dest
+
+      id + (dest - src)
+    end
+  end
+
+  def in_range?(x, {min, max}), do: x >= min and x <= max
+end
+
+defmodule Day05 do
+  def parse_almanac(content, opts \\ []) do
     [seeds | maps] = String.split(content, "\n\n")
 
     seeds = parse_seeds(seeds, opts)
@@ -59,7 +60,7 @@ defmodule Day05 do
     if Keyword.get(opts, :range_seed, false) do
       seeds
       |> Stream.chunk_every(2)
-      |> Stream.flat_map(fn [start, range_len] -> start..(start + range_len - 1) end)
+      |> Stream.map(fn [start, range_len] -> start..(start + range_len - 1) end)
     else
       seeds
     end
@@ -100,32 +101,4 @@ defmodule Day05 do
       src: {src, src + range_len - 1}
     }
   end
-
-  def map_seed_to_destination(seed, destination, maps),
-    do: map_source_to_destination(seed, "seed", destination, maps)
-
-  def map_source_to_destination(id, location, location, _), do: id
-
-  def map_source_to_destination(id, source, destination, maps) do
-    map = Enum.find(maps, fn %{source: src} -> src == source end)
-
-    id = map_id(id, map)
-
-    map_source_to_destination(id, map.destination, destination, maps)
-  end
-
-  def map_id(id, map) do
-    map.ranges |> Enum.find_value(id, &map_id_through_range(id, &1))
-  end
-
-  def map_id_through_range(id, range) do
-    if in_range?(id, range.src) do
-      {src, _} = range.src
-      {dest, _} = range.dest
-
-      id + (dest - src)
-    end
-  end
-
-  def in_range?(x, {min, max}), do: x >= min and x <= max
 end
