@@ -41,24 +41,24 @@ defmodule RangeUtils do
   end
 
   @doc """
-  Uses `ranges` to split `range` into multiple sub-range. Non matching
-  sub-range will be put into a tuple.
+  Uses `ranges` to split `range` into multiple sub-range.
 
   Ranges of `ranges` must not overlap and be sorted by range start.
 
   ## Examples
-    iex> RangeUtils.stream_split(0..15, [2..4, 6..8, 10..14]) |> Enum.to_list()
+    iex> RangeUtils.stream_split_and_shift(0..15, [{2..4, 1}, {6..8, 2}, {10..14, -4}]) |> Enum.to_list()
     [
-      {:no_match, 0..1},
-      2..4,
-      {:no_match, 5..5},
-      6..8,
-      {:no_match, 9..9},
-      10..14,
-      {:no_match, 15..15}
+      0..1,
+      3..5,
+      5..5,
+      8..10,
+      9..9,
+      6..10,
+      15..15
     ]
   """
-  def stream_split(range, ranges) do
+  @spec stream_split_and_shift(Range.t(), [{Range.t(), integer()}]) :: Enumerable.t([Range.t()])
+  def stream_split_and_shift(range, ranges) do
     ranges
     |> Stream.transform(
       fn -> range end,
@@ -66,36 +66,36 @@ defmodule RangeUtils do
         _, nil ->
           {:halt, nil}
 
-        splitter_range, range ->
+        {splitter_range, steps_to_shift}, range ->
           is..ie//_ = range
           ss..se//_ = splitter_range
 
           cond do
             RangeUtils.contains(range, splitter_range) ->
-              {[range], nil}
+              {[Range.shift(range, steps_to_shift)], nil}
 
             RangeUtils.disjoint_left?(range, splitter_range) ->
               {
-                [{:no_match, is..(ss - 1)}, ss..ie],
+                [is..(ss - 1), Range.shift(ss..ie, steps_to_shift)],
                 nil
               }
 
             RangeUtils.disjoint_right?(range, splitter_range) ->
               {
-                [is..se],
+                [Range.shift(is..se, steps_to_shift)],
                 (se + 1)..ie
               }
 
             RangeUtils.strictly_contains?(range, splitter_range) ->
               {
-                [{:no_match, is..(ss - 1)}, ss..se],
+                [is..(ss - 1), Range.shift(ss..se, steps_to_shift)],
                 (se + 1)..ie
               }
           end
       end,
       fn
         nil -> {:halt, nil}
-        range -> {[{:no_match, range}], nil}
+        range -> {[range], nil}
       end,
       fn _ -> nil end
     )

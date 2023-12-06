@@ -56,56 +56,61 @@ defmodule Day05Test do
       assert RangeUtils.strictly_contains?(1..5, 1..3) == false
     end
 
-    test "stream_split with a strictly containning splitting range" do
+    test "stream_split_and_shift with a strictly containning splitting range" do
       range = 0..10
-      splitting_ranges = [4..6]
+      splitting_ranges = [{4..6, 1}]
 
-      splitted_ranges = RangeUtils.stream_split(range, splitting_ranges) |> Enum.to_list()
+      splitted_ranges =
+        RangeUtils.stream_split_and_shift(range, splitting_ranges) |> Enum.to_list()
 
-      assert splitted_ranges == [{:no_match, 0..3}, 4..6, {:no_match, 7..10}]
+      assert splitted_ranges == [0..3, 5..7, 7..10]
     end
 
-    test "stream_split with a containning splitting range" do
+    test "stream_split_and_shift with a containning splitting range" do
       range = 0..10
-      splitting_ranges = [-1..15]
+      splitting_ranges = [{-1..15, 4}]
 
-      splitted_ranges = RangeUtils.stream_split(range, splitting_ranges) |> Enum.to_list()
+      splitted_ranges =
+        RangeUtils.stream_split_and_shift(range, splitting_ranges) |> Enum.to_list()
 
-      assert splitted_ranges == [0..10]
+      assert splitted_ranges == [4..14]
     end
 
-    test "stream_split with a disjoinning left splitting range" do
+    test "stream_split_and_shift with a disjoinning left splitting range" do
       range = 0..10
-      splitting_ranges = [6..10]
+      splitting_ranges = [{6..10, -4}]
 
-      splitted_ranges = RangeUtils.stream_split(range, splitting_ranges) |> Enum.to_list()
+      splitted_ranges =
+        RangeUtils.stream_split_and_shift(range, splitting_ranges) |> Enum.to_list()
 
-      assert splitted_ranges == [{:no_match, 0..5}, 6..10]
+      assert splitted_ranges == [0..5, 2..6]
     end
 
-    test "stream_split with a disjoinning right splitting range" do
+    test "stream_split_and_shift with a disjoinning right splitting range" do
       range = 0..10
-      splitting_ranges = [0..4]
+      splitting_ranges = [{0..4, 10}]
 
-      splitted_ranges = RangeUtils.stream_split(range, splitting_ranges) |> Enum.to_list()
+      splitted_ranges =
+        RangeUtils.stream_split_and_shift(range, splitting_ranges) |> Enum.to_list()
 
-      assert splitted_ranges == [0..4, {:no_match, 5..10}]
+      assert splitted_ranges == [10..14, 5..10]
     end
 
-    test "stream_split with a multipe splitting ranges" do
+    test "stream_split_and_shift with a multipe splitting ranges" do
       range = 0..100
-      splitting_ranges = [1..5, 6..7, 30..40, 70..100]
+      splitting_ranges = [{1..5, 0}, {6..7, 2}, {30..40, -10}, {70..100, -30}]
 
-      splitted_ranges = RangeUtils.stream_split(range, splitting_ranges) |> Enum.to_list()
+      splitted_ranges =
+        RangeUtils.stream_split_and_shift(range, splitting_ranges) |> Enum.to_list()
 
       assert splitted_ranges == [
-               {:no_match, 0..0},
+               0..0,
                1..5,
-               6..7,
-               {:no_match, 8..29},
-               30..40,
-               {:no_match, 41..69},
-               70..100
+               8..9,
+               8..29,
+               20..30,
+               41..69,
+               40..70
              ]
     end
   end
