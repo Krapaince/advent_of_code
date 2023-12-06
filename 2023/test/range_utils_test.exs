@@ -113,5 +113,15 @@ defmodule Day05Test do
                40..70
              ]
     end
+
+    test "stream_split_and_shift with disjointing splitting_range" do
+      range = 81..94
+      splitting_ranges = [{0..14, 39}, {15..66, -15}, {52..105, -15}]
+
+      splitted_ranges =
+        RangeUtils.stream_split_and_shift(range, splitting_ranges) |> Enum.to_list()
+
+      assert splitted_ranges == [66..79]
+    end
   end
 end

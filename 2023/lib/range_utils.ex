@@ -71,6 +71,9 @@ defmodule RangeUtils do
           ss..se//_ = splitter_range
 
           cond do
+            Range.disjoint?(range, splitter_range) ->
+              {[], range}
+
             RangeUtils.contains(range, splitter_range) ->
               {[Range.shift(range, steps_to_shift)], nil}
 
