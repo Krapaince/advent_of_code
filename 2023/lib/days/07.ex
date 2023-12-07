@@ -1,21 +1,35 @@
 defmodule Day07 do
-  def part1() do
-    AdventOfCode2023.get_lines("7")
-    |> parse_hands()
+  def part1(), do: run()
+  def part2(), do: run(joker: true)
+
+  def run(opts \\ []) do
+    AdventOfCode2023.get("7")
+    |> then(fn content ->
+      if Keyword.get(opts, :joker, false),
+        do: String.replace(content, "J", "*"),
+        else: content
+    end)
+    |> String.split("\n", trim: true)
+    |> parse_hands(opts)
     |> sort_camel_cards()
     |> enrich_sorted_cards_with_rank()
-    |> Enum.map(fn card -> card.rank * card.bid end)
-    |> Enum.sum()
+    |> compute_total()
   end
 
-  def parse_hands(content) do
+  def parse_hands(content, opts) do
     content
     |> Enum.map(fn line ->
       [raw_hand, bid] = String.split(line, " ")
 
       hand = parse_hand(raw_hand)
-      hand_type = hand_to_type(raw_hand)
+
+      hand_type =
+        if Keyword.get(opts, :joker, false),
+          do: hand_to_type_with_joker(raw_hand),
+          else: hand_to_type(raw_hand)
+
       type_strengh = type_to_strengh(hand_type)
+
       bid = String.to_integer(bid)
 
       %{
@@ -34,6 +48,7 @@ defmodule Day07 do
     |> Enum.map(&card_to_number/1)
   end
 
+  def card_to_number(?*), do: 0
   def card_to_number(?2), do: 1
   def card_to_number(?3), do: 2
   def card_to_number(?4), do: 3
@@ -48,6 +63,43 @@ defmodule Day07 do
   def card_to_number(?K), do: 12
   def card_to_number(?A), do: 13
 
+  def hand_to_type_with_joker("*****"), do: :five
+
+  def hand_to_type_with_joker(raw_hand) do
+    nb_jokers = raw_hand |> String.to_charlist() |> Enum.frequencies() |> Map.get(?*, 0)
+    hand_type_without_joker = raw_hand |> String.replace("*", "") |> hand_to_type()
+
+    case nb_jokers do
+      0 ->
+        hand_to_type(raw_hand)
+
+      1 ->
+        case hand_type_without_joker do
+          :four -> :five
+          :three -> :four
+          :two_pairs -> :full_house
+          :pair -> :three
+          :high_card -> :pair
+        end
+
+      2 ->
+        case hand_type_without_joker do
+          :three -> :five
+          :pair -> :four
+          :high_card -> :three
+        end
+
+      3 ->
+        case hand_type_without_joker do
+          :high_card -> :four
+          :pair -> :five
+        end
+
+      4 ->
+        :five
+    end
+  end
+
   def hand_to_type(hand) do
     nb_same_types =
       hand
@@ -61,7 +113,7 @@ defmodule Day07 do
       [4 | _] -> :four
       [3, 2] -> :full_house
       [3 | _] -> :three
-      [2, 2, _] -> :two_pairs
+      [2, 2 | _] -> :two_pairs
       [2 | _] -> :pair
       _ -> :high_card
     end
@@ -98,5 +150,11 @@ defmodule Day07 do
   def enrich_sorted_cards_with_rank(camel_cards) do
     camel_cards
     |> Enum.with_index(&Map.put(&1, :rank, &2 + 1))
+  end
+
+  def compute_total(camel_cards) do
+    camel_cards
+    |> Enum.map(fn card -> card.rank * card.bid end)
+    |> Enum.sum()
   end
 end
