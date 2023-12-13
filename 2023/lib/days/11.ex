@@ -1,11 +1,16 @@
 defmodule Day11 do
-  def part1() do
+  def part1(), do: run(2)
+  def part2(), do: run(1_000_000)
+
+  def run(galaxy_age) do
     content = AdventOfCode2023.get_lines("11")
 
     empty_spaces = find_empty_spaces(content)
 
+    galaxy_age = galaxy_age - 1
+
     find_galaxies(content)
-    |> Enum.map(&expand_galaxy(&1, empty_spaces))
+    |> Enum.map(&expand_galaxy(&1, empty_spaces, galaxy_age))
     |> make_galaxy_pairs()
     |> Enum.map(fn {g1, g2} -> compute_distance(g1, g2) end)
     |> Enum.sum()
@@ -46,7 +51,7 @@ defmodule Day11 do
     |> Enum.to_list()
   end
 
-  def expand_galaxy(galaxy, empty_spaces) do
+  def expand_galaxy(galaxy, empty_spaces, galaxy_age) do
     {xg, yg} = galaxy
     {horizontal_empty_spaces, vertical_empty_spaces} = empty_spaces
 
@@ -61,8 +66,8 @@ defmodule Day11 do
       |> Enum.count()
 
     {
-      xg + nb_vertical_empty_spaces,
-      yg + nb_horizontal_empty_spaces
+      xg + nb_vertical_empty_spaces * galaxy_age,
+      yg + nb_horizontal_empty_spaces * galaxy_age
     }
   end
 
