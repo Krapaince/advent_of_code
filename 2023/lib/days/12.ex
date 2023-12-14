@@ -1,26 +1,44 @@
 defmodule Day12 do
-  def part1() do
-    AdventOfCode2023.get_lines("12")
-    |> Stream.map(fn line ->
-      {springs, chunks_size} = parse_record(line)
+  def part1(), do: run()
 
-      generate_permutations(chunks_size, springs)
-      |> Stream.reject(&any_broken_springs_out_of_damaged_chunks?(springs, chunks_size, &1))
-      |> Enum.count()
-    end)
+  def part2(), do: run(folded: true)
+
+  def run(opts \\ []) do
+    AdventOfCode2023.get_lines("12")
+    |> EnumUtils.async_map_chunked(
+      fn line ->
+        {springs, chunks_size} = parse_record(line, opts)
+
+        generate_permutations(chunks_size, springs)
+        |> Stream.reject(&any_broken_springs_out_of_damaged_chunks?(springs, chunks_size, &1))
+        |> Enum.count()
+      end,
+      [100],
+      timeout: :infinity,
+      ordered: false,
+      max_concurrency: 30
+    )
     |> Enum.sum()
   end
 
-  def parse_record(line) do
-    [springs, damaged_spring_chunks_size] = String.split(line, " ")
+  def parse_record(line, opts) do
+    [springs, chunks_size] = String.split(line, " ")
+
+    {springs, chunks_size} =
+      if Keyword.get(opts, :folded, false),
+        do: {unfold_record(springs, "?"), unfold_record(chunks_size, ",")},
+        else: {springs, chunks_size}
 
     springs = String.to_charlist(springs)
 
-    damaged_spring_chunks_size =
-      damaged_spring_chunks_size |> String.split(",") |> Enum.map(&String.to_integer/1)
+    chunks_size =
+      chunks_size |> String.split(",") |> Enum.map(&String.to_integer/1)
 
-    {springs, damaged_spring_chunks_size}
+    {springs, chunks_size}
   end
+
+  def unfold_record(record, separator),
+    do: Stream.repeatedly(fn -> record end) |> Stream.take(5) |> Enum.join(separator)
 
   def generate_permutations(chunks_size, springs, offset \\ 0)
   def generate_permutations([], _, _), do: nil
